@@ -1,0 +1,470 @@
+{% extends "base.html" %}
+{% load i18n %}
+{% load staticfiles %}
+{% block title %}{% trans "Instances" %}{% endblock %}
+{% block style %}
+    <link href="{% static "css/table-sort.css" %}" rel="stylesheet">
+{% endblock %}
+{% block content %}
+    {% include 'sidebar.html' %}
+    <div class="main col-xs-12 col-sm-9" role="main">
+        {% if errors %}
+            {% for error in errors %}
+                <div class="alert alert-danger">
+                    <button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button>
+                    {{ error }}
+                </div>
+            {% endfor %}
+        {% endif %}
+        <div class="btn-group-sm">
+            <a data-toggle="modal" href="#addFromTemp" class="btn btn-success">{% trans "From Template" %}</a>
+        </div>
+        </br>
+        {% if instances %}
+            <div class="table-responsive">
+                <table class="table" id="sortTable">
+                    <thead>
+                    <tr class="active">
+                        <th>{% trans "Name" %}</th>
+                        <th>{% trans "Status" %}</th>
+                        <th>{% trans "VCPUs" %}</th>
+                        <th>{% trans "Memory" %}</th>
+                        <th style="width:252px;">{% trans "Action" %}</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    {% for inst in instances|dictsort:"name.lower"|dictsort:"status" %}
+                        <tr id="{{ inst.name }}">
+                            <td><a href="{% url 'instance' host_id inst.name %}"><i
+                                    class="icon-th-large"></i> {{ inst.name }}</a></td>
+                            <td>{% ifequal inst.status 1 %}
+                                <span class="label label-success">{% trans "Running" %}</span>
+                            {% endifequal %}
+                                {% ifequal inst.status 5 %}
+                                    <!--{% ifequal inst.has_managed_save_image 1 %}
+                                        <span class="label label-warning">{% trans "Saved" %}</span>
+                                    {% else %}-->
+                                        <span class="label label-danger">{% trans "Shutoff" %}</span>
+                                    <!--{% endifequal %}-->
+                                {% endifequal %}
+                                {% ifequal inst.status 3 %}
+                                    <span class="label label-warning">{% trans "Suspend" %}</span>
+                                {% endifequal %}
+                            </td>
+                            <td>{{ inst.vcpu }}</td>
+                            <td>{{ inst.memory }}{% trans "MB" %}</td>
+                            <td>
+                                <form action="" method="post" role="form">{% csrf_token %}
+                                    <input type="hidden" name="name" value="{{ inst.name }}"/>
+                                    {% ifequal inst.status 5 %}
+                                        <button class="btn btn-sm btn-default" type="submit" name="start" title="Start">
+                                            <span class="glyphicon glyphicon-play"></span>
+                                        </button>
+                                        <button class="btn btn-sm btn-default disabled" title="{% trans "Suspend" %}">
+                                            <span class="glyphicon glyphicon-pause"></span>
+                                        </button>
+                                        <!--<button class="btn btn-sm btn-default disabled" title="{% trans "Save" %}">
+                                            <span class="glyphicon glyphicon-download-alt"></span>
+                                        </button>-->
+                                        {% ifequal inst.has_managed_save_image 1 %}
+                                            <button class="btn btn-sm btn-default" type="submit" name="deletesaveimage"
+                                                    title="{% trans "Delete Save Image" %}">
+                                                <span class="glyphicon glyphicon-remove"></span>
+                                            </button>
+                                        {% else %}
+                                            <button class="btn btn-sm btn-default disabled" title="{% trans "Shutdown" %}">
+                                                <span class="glyphicon glyphicon-off"></span>
+                                            </button>
+                                        {% endifequal %}
+                                        <button class="btn btn-sm btn-default disabled"
+                                                title="{% trans "Force Shutdown" %}">
+                                            <span class="glyphicon glyphicon-stop"></span>
+                                        </button>
+                                        <button class="btn btn-sm btn-default disabled" title="{% trans "Console" %}">
+                                            <span class="glyphicon glyphicon-align-justify"></span>
+                                        </button>
+                                    {% endifequal %}
+                                    {% ifequal inst.status 3 %}
+                                        <button class="btn btn-sm btn-default" type="submit" name="resume"
+                                                title="{% trans "Resume" %}">
+                                            <span class="glyphicon glyphicon-play"></span>
+                                        </button>
+                                        <button class="btn btn-sm btn-default disabled" title="{% trans "Suspend" %}">
+                                            <span class="glyphicon glyphicon-pause"></span>
+                                        </button>
+                                        <!--<button class="btn btn-sm btn-default" type="submit" name="managedsave"
+                                                title="{% trans "Save" %}">
+                                            <span class="glyphicon glyphicon-download-alt"></span>
+                                        </button>-->
+                                        <button class="btn btn-sm btn-default disabled" title="{% trans "Shutdown" %}">
+                                            <span class="glyphicon glyphicon-off"></span>
+                                        </button>
+                                        <button class="btn btn-sm btn-default disabled"
+                                                title="{% trans "Force Shutdown" %}">
+                                            <span class="glyphicon glyphicon-stop"></span>
+                                        </button>
+                                        <button class="btn btn-sm btn-default disabled" title="{% trans "Console" %}">
+                                            <span class="glyphicon glyphicon-align-justify"></span>
+                                        </button>
+                                    {% endifequal %}
+                                    {% ifequal inst.status 1 %}
+                                        <button class="btn btn-sm btn-default disabled" title="{% trans "Start" %}">
+                                            <span class="glyphicon glyphicon-play"></span>
+                                        </button>
+                                        <button class="btn btn-sm btn-default" type="submit" name="suspend"
+                                                title="{% trans "Suspend" %}">
+                                            <span class="glyphicon glyphicon-pause"></span>
+                                        </button>
+                                        <!--<button class="btn btn-sm btn-default" type="submit" name="managedsave"
+                                                title="{% trans "Save" %}">
+                                            <span class="glyphicon glyphicon-download-alt"></span>
+                                        </button>-->
+                                        <button class="btn btn-sm btn-default" type="submit" name="shutdown"
+                                                title="{% trans "Shutdown" %}">
+                                            <span class="glyphicon glyphicon-off"></span>
+                                        </button>
+                                        <button class="btn btn-sm btn-default" type="submit" name="destroy"
+                                                title="{% trans "Force Shutdown" %}"
+                                                onclick="return confirm('Are you sure?')">
+                                            <span class="glyphicon glyphicon-stop"></span>
+                                        </button>
+                                        <a href="#" class="btn btn-sm btn-default"
+                                           onclick='open_console("{{ host_id }}-{{ inst.uuid }}")' title="{% trans "Console" %}">
+                                            <span class="glyphicon glyphicon-align-justify"></span>
+                                        </a>
+                                    {% endifequal %}
+                                </form>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="well">
+                <h4>{% trans "You do not have any Virtual Machines" %}</h4>
+            </div>
+        {% endif %}
+
+        <h4>{% trans "Performance" %}</h4>
+        <p>{% trans "CPU usage" %}</p>
+        <canvas id="cpuChart" width="700" height="200"></canvas>
+        <p>{% trans "Memory usage" %}</p>
+        <canvas id="memoryChart" width="700" height="200"></canvas>
+
+    </div>
+         <!-- Modal From template -->
+    <div class="modal fade" id="addFromTemp" tabindex="-1"  role="dialog" aria-labelledby="addCustomLabel"
+         aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">&times;</button>
+                    <h4 class="modal-title">{% trans "Create Instance From Template Image" %}</h4>
+                </div>
+                <form id="creat_vm" class="form-horizontal" method="post" action="" role="form">{% csrf_token %}
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">{% trans "Name" %}</label>
+
+                        <div class="col-sm-6">
+                            <input type="text" class="form-control" name="name" placeholder="{% trans "Name" %}"
+                                   maxlength="14" required pattern="[a-zA-Z0-9\.\-_]+">
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">{% trans "VCPU" %}</label>
+
+                        <div class="col-sm-6">
+                            <select name="cur_vcpu" class="form-control">
+                                {% for cpu in vcpu_range %}
+                                    {% if cur_vcpu %}
+                                        <option value="{{ cpu }}" {% if cpu == cur_vcpu %}selected{% endif %}>{{ cpu }}</option>
+                                    {% else %}
+                                        <option value="{{ cpu }}" {% if cpu == vcpu %}selected{% endif %}>{{ cpu }}</option>
+                                    {% endif %}
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">{% trans "RAM" %}</label>
+
+                        <div class="col-sm-6">
+                            <select name="cur_memory" class="form-control js-custom__toggle">
+                                {% for mem in memory_range %}
+                                    <option value="{{ mem }}"
+                                            {% if mem == cur_memory %}selected{% endif %}>{{ mem }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <label class="col-sm-1 control-label">{% trans "MB" %}</label>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-3 control-label">{% trans "HDD" %}</label>
+
+                        <div class="col-sm-6">
+                            <select name="template" class="form-control">
+                                {% if get_images %}
+                                    {% for image in get_images %}
+                                        <option value="{{ image.name }}">{{ image.name }}</option>
+                                    {% endfor %}
+                                {% else %}
+                                    <option value="">{% trans "None" %}</option>
+                                {% endif %}
+                            </select>
+                        </div>
+                    </div>
+	            <div class="form-group">
+			<label class="col-sm-3 control-label">{% trans "Network" %}</label>
+                        <div class="col-sm-6">
+                            <input type="hidden" name="interface-form" value="1">
+			    <input type="text" id="interface-form" readonly="readonly" class="form-control" required name="test" value="" placeholder="请选择网卡,最多可选取{{cnt_max}}个">            
+                            
+                            <label id="interfaces_tips" style="display:none">请填写该字段</label>
+                            <label id="interfaces_tips_sum" style="display:none">最多可选取{{cnt_max}}</label>
+                            <div style="margin-top:10px">
+			    <ul class="nav nav-tabs" role="tablist">
+			    {% if ifaces_all %}
+				    {% for item in ifaces_all %}
+					<li role="presentation" class=""><a href="#{{item.0}}" aria-controls="home" role="tab" data-toggle="tab">{{item.0}}</a></li>
+				
+				    {% endfor %}
+		            {% endif %}
+		            </ul>
+	                    {% if ifaces_all %}
+			            <div class="tab-content">
+				    {% for item_f in ifaces_all %}
+				    <div role="tabpanel" class="tab-pane" id="{{item_f.0}}"">
+			                 {% for key,value in item_f.1.items %}
+			                 <div >
+			                 <label class="">{{key}}</label>
+			                 <input type="checkbox" showname="{{key}}.{{value}}" name="interfaces" onclick="addorReduceInterface(this,{{cnt_max}})" value="{{item_c.0}}">
+				         
+			                 </div>
+					 {% endfor%}
+				     </div> 
+	                             {% endfor %}
+	                    </div>
+			    {% endif %}
+			    </div>
+ 		       </div>
+		       <label id="s_sum" class="col-sm-1 control-label">0</label>
+	            </div>
+                    
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">{% trans "Close" %}</button>
+                        {% if get_images and vcpu_memory_left_flag %}
+                            <input type="hidden" name="create" value="1">
+                            <button id="submitbtn" type="button" class="btn btn-primary" name="create" onclick="submit_vm()" 
+                                    >{% trans "Create" %}</button>
+                        {% else %}
+                            <button class="btn btn-primary disabled">{% trans "Create" %}</button>
+                        {% endif %}
+                    </div>
+                </form>
+            </div>
+            <!-- /.modal-content -->
+        </div>
+        <!-- /.modal-dialog -->
+    </div><!-- /.modal -->
+    {% include 'sidebar_close.html' %}
+{% endblock %}
+{% block script %}
+    <script src="{% static "js/bootstrap-multiselect.js" %}"></script>
+    <script src="{% static "js/jquery.tablesorter.js" %}"></script>
+    <script>
+
+        function submit_vm(){
+            if(!$("#interface-form").val()){
+                $("#interfaces_tips").show();
+                return
+            }
+            $("#submitbtn").addClass("disabled")         
+            $("#creat_vm").submit()
+        }
+        var select_sum = 0
+        function addorReduceInterface(e,max){
+            var ischecked = $(e).is(":checked");
+            var interfacename = $(e).attr('showname');
+            if (ischecked){
+                if($("#interface-form").val()){
+                    if(select_sum>=max){
+                        $("#interfaces_tips_sum").show();
+                        $(e).attr('name');
+                        $(e).attr('checked',false);
+                        return;
+                    }
+                    $("#interface-form").val($("#interface-form").val()+","+interfacename);
+                    select_sum=select_sum+1;
+                }else{
+                    $("#interface-form").val(interfacename);
+                    select_sum=select_sum+1;
+                }
+            }else{
+                $("#interface-form").val($("#interface-form").val().replace(","+interfacename,""));
+                $("#interface-form").val($("#interface-form").val().replace(interfacename,""));
+                select_sum=select_sum-1;
+            }   
+            $("#s_sum").text(select_sum);
+            
+        }     
+        
+        function status() {
+            $.getJSON('{% url 'insts_status' host_id %}', function (data) {
+                for (var i = 0; i < data.length; i++) {
+                    var elem = '#' + data[i]['name']
+                    if (data[i]['status'] === 1) {
+                        if (data[i]['dump'] === 1) {
+                            var btn = "<button class='btn btn-sm btn-default' type='submit' name='deletesaveimage' title='{% trans "Delete Save Image" %}'>"
+                                    + "<span class='glyphicon glyphicon-remove'></span>"
+                                    + "</button> ";
+                        } else {
+                            var btn = "<button class='btn btn-sm btn-default' type='submit' name='shutdown' title='{% trans "Shutdown" %}'>"
+                                    + "<span class='glyphicon glyphicon-off'></span>"
+                                    + "</button> ";
+                        }
+                        $(elem).html("<td><a href='/instance/{{ host_id }}/" + data[i]['name'] + "'><i class='icon-th-large'></i> " + data[i]['name'] + "</a></td>"
+                                + "<td><span class='label label-success'>{% trans "Running" %}</span></td>"
+                                + "<td>" + data[i]['vcpu'] + "</td>"
+                                + "<td>" + data[i]['memory'] + "{% trans "MB" %}</td>"
+                                + "<td>"
+                                + "<form action='' method='post'>{% csrf_token %}"
+                                + "<input type='hidden' name='name' value='" + data[i]['name'] + "' />"
+                                + "<button class='btn btn-sm btn-default disabled' title='{% trans "Start" %}'>"
+                                + "<span class='glyphicon glyphicon-play'></span>"
+                                + "</button> "
+                                + "<button class='btn btn-sm btn-default' type='submit' name='suspend' title='{% trans "Suspend" %}'>"
+                                + "<span class='glyphicon glyphicon-pause'></span>"
+                                + "</button> "
+                                + "<!--<button class='btn btn-sm btn-default' type='submit' name='managedsave' title='{% trans "Save" %}'>"
+                                + "<span class='glyphicon glyphicon-download-alt'></span>"
+                                + "</button>--> "
+                                + btn
+                                + "<button class='btn btn-sm btn-default' type='submit' name='destroy' title='{% trans "Force Shutdown" %}' onclick='return confirm('Are you sure?')'>"
+                                + "<span class='glyphicon glyphicon-stop'></span>"
+                                + "</button> "
+                                + "<a href='#' class='btn btn-sm btn-default' onclick='open_console(\"" + data[i]['host'] + "-" + data[i]['uuid'] + "\")' title='{% trans "Console" %}'>"
+                                + "<span class='glyphicon glyphicon-align-justify'></span>"
+                                + "</a> "
+                                + "</form>"
+                                + "</td>");
+                    }
+                    if (data[i]['status'] === 3) {
+                        $(elem).html("<td><a href='/instance/{{ host_id }}/" + data[i]['name'] + "'><i class='icon-th-large'></i> " + data[i]['name'] + "</a></td>"
+                                + "<td><span class='label label-warning'>{% trans "Suspend" %}</span></td>"
+                                + "<td>" + data[i]['vcpu'] + "</td>"
+                                + "<td>" + data[i]['memory'] + "{% trans "MB" %}</td>"
+                                + "<td>"
+                                + "<form action='' method='post'>{% csrf_token %}"
+                                + "<input type='hidden' name='name' value='" + data[i]['name'] + "' />"
+                                + "<button class='btn btn-sm btn-default' type='submit' name='resume' title='{% trans "Resume" %}'>"
+                                + "<span class='glyphicon glyphicon-play'></span>"
+                                + "</button> "
+                                + "<button class='btn btn-sm btn-default disabled' title='{% trans "Suspend" %}'>"
+                                + "<span class='glyphicon glyphicon-pause'></span>"
+                                + "</button> "
+                                + "<!--<button class='btn btn-sm btn-default' type='submit' name='managedsave' title='{% trans "Save" %}'>"
+                                + "<span class='glyphicon glyphicon-download-alt'></span>"
+                                + "</button>--> "
+                                + "<button class='btn btn-sm btn-default disabled' title='{% trans "Shutdown" %}'>"
+                                + "<span class='glyphicon glyphicon-off''></span>"
+                                + "</button> "
+                                + "<button class='btn btn-sm btn-default disabled' title='{% trans "Force Shutdown" %}'>"
+                                + "<span class='glyphicon glyphicon-stop'></span>"
+                                + "</button> "
+                                + "<button class='btn btn-sm btn-default disabled' title='{% trans "Console" %}'>"
+                                + "<span class='glyphicon glyphicon-align-justify'></span>"
+                                + "</button> "
+                                + "</form>"
+                                + "</td>");
+                    }
+                    if (data[i]['status'] == 5) {
+                        $(elem).html("<td><a href='/instance/{{ host_id }}/" + data[i]['name'] + "'><i class='icon-th-large'></i> " + data[i]['name'] + "</a></td>"
+                                + "<td><span class='label label-danger'>{% trans "Shutoff" %}</span></td>"
+                                + "<td>" + data[i]['vcpu'] + "</td>"
+                                + "<td>" + data[i]['memory'] + "{% trans "MB" %}</td>"
+                                + "<td>"
+                                + "<form action='' method='post'>{% csrf_token %}"
+                                + "<input type='hidden' name='name' value='" + data[i]['name'] + "' />"
+                                + "<button class='btn btn-sm btn-default' type='submit' name='start' title='{% trans "Start" %}'>"
+                                + "<span class='glyphicon glyphicon-play'></span>"
+                                + "</button> "
+                                + "<button class='btn btn-sm btn-default disabled' title='{% trans "Suspend" %}'>"
+                                + "<span class='glyphicon glyphicon-pause'></span>"
+                                + "</button> "
+                                + "<!--<button class='btn btn-sm btn-default disabled' title='{% trans "Save" %}'>"
+                                + "<span class='glyphicon glyphicon-download-alt'></span>"
+                                + "</button>--> "
+                                + "<button class='btn btn-sm btn-default disabled' title='{% trans "Shutdown" %}'>"
+                                + "<span class='glyphicon glyphicon-off'></span>"
+                                + "</button> "
+                                + "<button class='btn btn-sm btn-default disabled' title='{% trans "Force Shutdown" %}'>"
+                                + "<span class='glyphicon glyphicon-stop'></span>"
+                                + "</button> "
+                                + "<button class='btn btn-sm btn-default disabled' title='{% trans "Console" %}'>"
+                                + "<span class='glyphicon glyphicon-align-justify'></span>"
+                                + "</button> "
+                                + "</form>"
+                                + "</td>");
+                    }
+                }
+            });
+        }
+
+        $(function () {
+            window.setInterval('status()', {{ time_refresh }});
+        });
+
+        function open_console(uuid) {
+            window.open("/console/?token=" + uuid, "", "width=850,height=485");
+        }
+    </script>
+
+    <script>
+        $(function() {
+            $("#sortTable").tablesorter({
+                ignoreCase: true,
+                sortList: [[1,0], [0,0]],
+                headers: {4: {sorter: false}},
+                textSorter: {0: $.tablesorter.sortText}
+            });
+        });
+    </script>
+
+
+    <script src="{% static "js/Chart.min.js" %}"></script>
+    <script>
+        var cpu_ctx = $("#cpuChart").get(0).getContext("2d");
+        var cpuChart = new Chart(cpu_ctx);
+        var cpu_options = {
+            animation: false,
+            pointDotRadius: 2,
+            scaleLabel: "<%=value%> %",
+            scaleOverride: true,
+            scaleSteps: 10,
+            scaleStepWidth: 10,
+            scaleStartValue: 0,
+            responsive: true
+        };
+
+        var mem_ctx = $("#memoryChart").get(0).getContext("2d");
+        var memChart = new Chart(mem_ctx);
+        var mem_options = {
+            animation: false,
+            pointDotRadius: 2,
+            scaleLabel: "<%=value%> Mb",
+            responsive: true
+        };
+
+        function hostusage() {
+            $.getJSON('{% url 'hostusage' host_id %}', function (data) {
+                cpuChart.Line(data['cpu'], cpu_options);
+                memChart.Line(data['memory'], mem_options);
+            });
+        }
+
+        $(function () {
+            window.setInterval('hostusage()', {{ time_refresh }});
+        });
+    </script>
+{% endblock %}
